@@ -15,6 +15,7 @@ dependencies = [
     "loguru>=0.7.2",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "requests>=2.32.5",
 ]
 license = { file = "LICENSE" }
 classifiers = [
@@ -39,7 +40,12 @@ dev = [
     "mkdocstrings-python",
     "types-pyyaml>=6.0.12.20250915",
     "tzdata>=2025.3",
-    "pytest-xdist>=3.6.1"
+    "pytest-xdist>=3.6.1",
+    "pytest-mock>=3.15.1",
+    "responses>=0.26.0",
+    "types-pygments>=2.19.0.20251121",
+    "types-pexpect>=4.9.0.20260127",
+    "types-requests>=2.32.4.20260107",
 ]
 
 [tool.hatch.build.targets.wheel]
