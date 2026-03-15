@@ -1,0 +1,73 @@
+# Copyright (c) 2026 CoReason, Inc.
+#
+# This software is proprietary and dual-licensed.
+# Licensed under the Prosperity Public License 3.0 (the "License").
+# A copy of the license is available at https://prosperitylicense.com/versions/3.0.0
+# For details, see the LICENSE file.
+# Commercial use beyond a 30-day trial requires a separate license.
+#
+# Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
+
+import uuid
+from pathlib import Path
+
+import polars as pl
+from pydantic import BaseModel, Field
+
+from coreason_etl_snomed.config import EpistemicOntologyPolicy
+from coreason_etl_snomed.utils.logger import logger
+
+
+class EpistemicSilverConceptIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for cleaning, typing, and filtering the raw Concept
+    Snapshot terminology files from the local Bronze data layer into the Silver memory space,
+    creating deterministic UUID5 identity resolutions.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self) -> pl.LazyFrame:
+        """
+        Executes the silver concept transformation. It scans the extracted Concept Snapshot files,
+        applies filters, casts data types, and computes the deterministic `coreason_id`.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed concepts.
+        """
+        bronze_dir = Path(self.policy.bronze_data_path)
+        logger.info(f"Looking for Concept Snapshot files in {bronze_dir}")
+
+        concept_files = list(bronze_dir.glob("sct2_Concept_Snapshot_*.txt"))
+        if not concept_files:
+            error_msg = f"No Concept Snapshot files found in {bronze_dir}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+        # In case there are multiple, we'll just scan all matched files.
+        # polars `scan_csv` supports glob patterns directly or a list of paths.
+        concept_file_paths = [str(f) for f in concept_files]
+        logger.info(f"Scanning files: {concept_file_paths}")
+
+        # Ensure we treat 'id' as Utf8 upfront to avoid precision loss.
+        lf = pl.scan_csv(
+            concept_file_paths,
+            separator="\t",
+            schema_overrides={"id": pl.String, "moduleId": pl.String, "definitionStatusId": pl.String},
+        )
+
+        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
+
+        def generate_uuid(snomed_id: str) -> str:
+            return str(uuid.uuid5(namespace_uuid, snomed_id))
+
+        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
+            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+        )
+
+        logger.info("Successfully constructed Silver Concept LazyFrame.")
+        return transformed_lf
