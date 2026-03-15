@@ -71,3 +71,66 @@ class EpistemicSilverConceptIntent(BaseModel):
 
         logger.info("Successfully constructed Silver Concept LazyFrame.")
         return transformed_lf
+
+
+class EpistemicSilverDescriptionIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for cleaning, typing, and filtering the raw Description
+    Snapshot terminology files from the local Bronze data layer into the Silver memory space,
+    creating deterministic UUID5 identity resolutions.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self) -> pl.LazyFrame:
+        """
+        Executes the silver description transformation. It scans the extracted Description Snapshot files,
+        applies filters, casts data types, and computes the deterministic `coreason_id` for the description
+        and the associated concept.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed descriptions.
+        """
+        bronze_dir = Path(self.policy.bronze_data_path)
+        logger.info(f"Looking for Description Snapshot files in {bronze_dir}")
+
+        description_files = list(bronze_dir.glob("sct2_Description_Snapshot_*.txt"))
+        if not description_files:
+            error_msg = f"No Description Snapshot files found in {bronze_dir}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+        description_file_paths = [str(f) for f in description_files]
+        logger.info(f"Scanning files: {description_file_paths}")
+
+        # Ensure we treat all IDs as Utf8 upfront to avoid precision loss.
+        lf = pl.scan_csv(
+            description_file_paths,
+            separator="\t",
+            schema_overrides={
+                "id": pl.String,
+                "moduleId": pl.String,
+                "conceptId": pl.String,
+                "languageCode": pl.String,
+                "typeId": pl.String,
+                "term": pl.String,
+                "caseSignificanceId": pl.String,
+            },
+        )
+
+        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
+
+        def generate_uuid(snomed_id: str) -> str:
+            return str(uuid.uuid5(namespace_uuid, snomed_id))
+
+        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
+            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+            pl.col("conceptId").map_elements(generate_uuid, return_dtype=pl.String).alias("concept_coreason_id"),
+        )
+
+        logger.info("Successfully constructed Silver Description LazyFrame.")
+        return transformed_lf
