@@ -234,17 +234,12 @@ class EpistemicGoldConceptIntent(BaseModel):
         # The primary string name should be just 'term'
         filtered_desc = silver_description.filter(
             (pl.col("typeId") == "900000000000003001") & (pl.col("active") == 1)
-        ).select(
-            ["concept_coreason_id", "term"]
-        )
+        ).select(["concept_coreason_id", "term"])
 
         # Join concept with filtered descriptions
         # Using left join to retain concepts even if they lack a Fully Specified Name for some reason
         transformed_lf = silver_concept.join(
-            filtered_desc,
-            left_on="coreason_id",
-            right_on="concept_coreason_id",
-            how="left"
+            filtered_desc, left_on="coreason_id", right_on="concept_coreason_id", how="left"
         ).rename({"term": "name"})
 
         logger.info("Successfully constructed Gold Concept LazyFrame.")
