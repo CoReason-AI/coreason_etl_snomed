@@ -8,13 +8,18 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
 
+import uuid
+from datetime import date
 from pathlib import Path
 
 import polars as pl
 import pytest
 
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
-from coreason_etl_snomed.transform import EpistemicSilverConceptIntent
+from coreason_etl_snomed.transform import (
+    EpistemicSilverConceptIntent,
+    EpistemicSilverDescriptionIntent,
+)
 
 
 @pytest.fixture
@@ -81,9 +86,6 @@ def test_epistemic_silver_concept_uuid_and_date(policy: EpistemicOntologyPolicy)
     df = intent.execute().collect()
 
     # Assert
-    import uuid
-    from datetime import date
-
     expected_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "138875005"))
     assert df["coreason_id"][0] == expected_uuid
     assert df["effectiveTime"][0] == date(2002, 1, 31)
@@ -96,4 +98,88 @@ def test_epistemic_silver_concept_missing_files(policy: EpistemicOntologyPolicy)
 
     # Act / Assert
     with pytest.raises(FileNotFoundError, match="No Concept Snapshot files found"):
+        intent.execute()
+
+
+def test_epistemic_silver_description_reads_and_casts_id(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    desc_file = Path(policy.bronze_data_path) / "sct2_Description_Snapshot_123.txt"
+    with open(desc_file, "w", encoding="utf-8") as f:
+        f.write("id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcaseSignificanceId\n")
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "en\t900000000000003001\tSNOMED CT Concept\t900000000000020002\n"
+        )
+
+    intent = EpistemicSilverDescriptionIntent(policy=policy)
+
+    # Act
+    lazy_frame = intent.execute()
+    df = lazy_frame.collect()
+
+    # Assert
+    assert len(df) == 1
+
+    # Verify `id` and `conceptId` are properly cast as string type
+    assert df["id"].dtype == pl.String
+    assert df["id"][0] == "11111"
+    assert df["conceptId"].dtype == pl.String
+    assert df["conceptId"][0] == "138875005"
+
+
+def test_epistemic_silver_description_filters_inactive(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    desc_file = Path(policy.bronze_data_path) / "sct2_Description_Snapshot_123.txt"
+    with open(desc_file, "w", encoding="utf-8") as f:
+        f.write("id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcaseSignificanceId\n")
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "en\t900000000000003001\tSNOMED CT Concept\t900000000000020002\n"
+        )
+        f.write(
+            "22222\t20020131\t0\t900000000000207008\t138875006\t"
+            "en\t900000000000013009\tAnother Concept\t900000000000020002\n"
+        )
+
+    intent = EpistemicSilverDescriptionIntent(policy=policy)
+
+    # Act
+    df = intent.execute().collect()
+
+    # Assert
+    assert len(df) == 1
+    assert "22222" not in df["id"].to_list()
+
+
+def test_epistemic_silver_description_uuid_and_date(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    desc_file = Path(policy.bronze_data_path) / "sct2_Description_Snapshot_123.txt"
+    with open(desc_file, "w", encoding="utf-8") as f:
+        f.write("id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcaseSignificanceId\n")
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "en\t900000000000003001\tSNOMED CT Concept\t900000000000020002\n"
+        )
+
+    intent = EpistemicSilverDescriptionIntent(policy=policy)
+
+    # Act
+    df = intent.execute().collect()
+
+    # Assert
+    expected_desc_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "11111"))
+    expected_concept_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "138875005"))
+
+    assert df["coreason_id"][0] == expected_desc_uuid
+    assert df["concept_coreason_id"][0] == expected_concept_uuid
+    assert df["effectiveTime"][0] == date(2002, 1, 31)
+
+
+def test_epistemic_silver_description_missing_files(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    # Bronze dir is empty initially
+    intent = EpistemicSilverDescriptionIntent(policy=policy)
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError, match="No Description Snapshot files found"):
         intent.execute()
