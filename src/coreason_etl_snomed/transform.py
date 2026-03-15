@@ -244,3 +244,42 @@ class EpistemicGoldConceptIntent(BaseModel):
 
         logger.info("Successfully constructed Gold Concept LazyFrame.")
         return transformed_lf
+
+
+class EpistemicGoldSynonymIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for filtering the Silver Description data for
+    acceptable synonyms and creating a bridge mapping between a concept's `coreason_id`
+    and an array of its synonyms.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self, silver_description: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Executes the gold synonym transformation. It filters the Silver Description for acceptable synonyms
+        and groups them into an array per concept.
+
+        Args:
+            silver_description (pl.LazyFrame): The transformed Silver Description data.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed gold synonyms.
+        """
+        logger.info("Constructing Gold Synonym LazyFrame.")
+
+        # Filter for acceptable synonyms (typeId == 900000000000013009) and active == 1
+        filtered_desc = silver_description.filter((pl.col("typeId") == "900000000000013009") & (pl.col("active") == 1))
+
+        # Group by concept_coreason_id and aggregate terms into a list, sorting to ensure determinism
+        transformed_lf = (
+            filtered_desc.group_by("concept_coreason_id")
+            .agg(pl.col("term").sort().alias("synonyms"))
+            .rename({"concept_coreason_id": "coreason_id"})
+        )
+
+        logger.info("Successfully constructed Gold Synonym LazyFrame.")
+        return transformed_lf
