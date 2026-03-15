@@ -60,7 +60,7 @@ def test_epistemic_ontology_policy_missing_required() -> None:
     assert "db_uri" in missing_fields
 
 
-@given(  # type: ignore
+@given(
     st.text(min_size=1),
     st.text(min_size=1),
     st.text(min_size=0),
@@ -82,7 +82,7 @@ def test_epistemic_ontology_policy_hypothesis(
     assert policy.snomed_namespace_uuid == snomed_namespace_uuid
 
 
-@given(st.text(max_size=0))  # type: ignore
+@given(st.text(max_size=0))
 def test_epistemic_ontology_policy_empty_secrets(empty_str: str) -> None:
     """Test validation failure when secrets are empty strings."""
     with pytest.raises(ValidationError):

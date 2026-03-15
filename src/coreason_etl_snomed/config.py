@@ -16,7 +16,7 @@ from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EpistemicOntologyPolicy(BaseSettings):  # type: ignore
+class EpistemicOntologyPolicy(BaseSettings):
     """
     AGENT INSTRUCTION: Establishes configuration boundaries for the ontology pipeline.
     """
