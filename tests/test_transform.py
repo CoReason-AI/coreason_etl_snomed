@@ -19,6 +19,7 @@ from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.transform import (
     EpistemicSilverConceptIntent,
     EpistemicSilverDescriptionIntent,
+    EpistemicSilverRelationshipIntent,
 )
 
 
@@ -182,4 +183,103 @@ def test_epistemic_silver_description_missing_files(policy: EpistemicOntologyPol
 
     # Act / Assert
     with pytest.raises(FileNotFoundError, match="No Description Snapshot files found"):
+        intent.execute()
+
+
+def test_epistemic_silver_relationship_reads_and_casts_id(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    rel_file = Path(policy.bronze_data_path) / "sct2_Relationship_Snapshot_123.txt"
+    with open(rel_file, "w", encoding="utf-8") as f:
+        f.write(
+            "id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\n"
+        )
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "138875006\t0\t116680003\t900000000000010007\t900000000000214000\n"
+        )
+
+    intent = EpistemicSilverRelationshipIntent(policy=policy)
+
+    # Act
+    lazy_frame = intent.execute()
+    df = lazy_frame.collect()
+
+    # Assert
+    assert len(df) == 1
+
+    # Verify ID fields are properly cast as string type
+    assert df["id"].dtype == pl.String
+    assert df["id"][0] == "11111"
+    assert df["sourceId"].dtype == pl.String
+    assert df["sourceId"][0] == "138875005"
+    assert df["destinationId"].dtype == pl.String
+    assert df["destinationId"][0] == "138875006"
+    assert df["typeId"].dtype == pl.String
+    assert df["typeId"][0] == "116680003"
+
+
+def test_epistemic_silver_relationship_filters_inactive(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    rel_file = Path(policy.bronze_data_path) / "sct2_Relationship_Snapshot_123.txt"
+    with open(rel_file, "w", encoding="utf-8") as f:
+        f.write(
+            "id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\n"
+        )
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "138875006\t0\t116680003\t900000000000010007\t900000000000214000\n"
+        )
+        f.write(
+            "22222\t20020131\t0\t900000000000207008\t138875005\t"
+            "138875007\t0\t116680003\t900000000000010007\t900000000000214000\n"
+        )
+
+    intent = EpistemicSilverRelationshipIntent(policy=policy)
+
+    # Act
+    df = intent.execute().collect()
+
+    # Assert
+    assert len(df) == 1
+    assert "22222" not in df["id"].to_list()
+
+
+def test_epistemic_silver_relationship_uuid_and_date(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    rel_file = Path(policy.bronze_data_path) / "sct2_Relationship_Snapshot_123.txt"
+    with open(rel_file, "w", encoding="utf-8") as f:
+        f.write(
+            "id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\n"
+        )
+        f.write(
+            "11111\t20020131\t1\t900000000000207008\t138875005\t"
+            "138875006\t0\t116680003\t900000000000010007\t900000000000214000\n"
+        )
+
+    intent = EpistemicSilverRelationshipIntent(policy=policy)
+
+    # Act
+    df = intent.execute().collect()
+
+    # Assert
+    ns = uuid.UUID(policy.snomed_namespace_uuid)
+    expected_rel_uuid = str(uuid.uuid5(ns, "11111"))
+    expected_source_uuid = str(uuid.uuid5(ns, "138875005"))
+    expected_dest_uuid = str(uuid.uuid5(ns, "138875006"))
+    expected_type_uuid = str(uuid.uuid5(ns, "116680003"))
+
+    assert df["coreason_id"][0] == expected_rel_uuid
+    assert df["source_coreason_id"][0] == expected_source_uuid
+    assert df["destination_coreason_id"][0] == expected_dest_uuid
+    assert df["type_coreason_id"][0] == expected_type_uuid
+    assert df["effectiveTime"][0] == date(2002, 1, 31)
+
+
+def test_epistemic_silver_relationship_missing_files(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    # Bronze dir is empty initially
+    intent = EpistemicSilverRelationshipIntent(policy=policy)
+
+    # Act / Assert
+    with pytest.raises(FileNotFoundError, match="No Relationship Snapshot files found"):
         intent.execute()
