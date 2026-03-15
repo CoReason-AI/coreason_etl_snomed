@@ -134,3 +134,71 @@ class EpistemicSilverDescriptionIntent(BaseModel):
 
         logger.info("Successfully constructed Silver Description LazyFrame.")
         return transformed_lf
+
+
+class EpistemicSilverRelationshipIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for cleaning, typing, and filtering the raw Relationship
+    Snapshot terminology files from the local Bronze data layer into the Silver memory space,
+    creating deterministic UUID5 identity resolutions.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self) -> pl.LazyFrame:
+        """
+        Executes the silver relationship transformation. It scans the extracted Relationship Snapshot files,
+        applies filters, casts data types, and computes the deterministic `coreason_id` for the relationship,
+        source, destination, and type.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed relationships.
+        """
+        bronze_dir = Path(self.policy.bronze_data_path)
+        logger.info(f"Looking for Relationship Snapshot files in {bronze_dir}")
+
+        relationship_files = list(bronze_dir.glob("sct2_Relationship_Snapshot_*.txt"))
+        if not relationship_files:
+            error_msg = f"No Relationship Snapshot files found in {bronze_dir}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+        relationship_file_paths = [str(f) for f in relationship_files]
+        logger.info(f"Scanning files: {relationship_file_paths}")
+
+        # Ensure we treat all IDs as Utf8 upfront to avoid precision loss.
+        lf = pl.scan_csv(
+            relationship_file_paths,
+            separator="\t",
+            schema_overrides={
+                "id": pl.String,
+                "moduleId": pl.String,
+                "sourceId": pl.String,
+                "destinationId": pl.String,
+                "relationshipGroup": pl.String,
+                "typeId": pl.String,
+                "characteristicTypeId": pl.String,
+                "modifierId": pl.String,
+            },
+        )
+
+        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
+
+        def generate_uuid(snomed_id: str) -> str:
+            return str(uuid.uuid5(namespace_uuid, snomed_id))
+
+        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
+            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+            pl.col("sourceId").map_elements(generate_uuid, return_dtype=pl.String).alias("source_coreason_id"),
+            pl.col("destinationId")
+            .map_elements(generate_uuid, return_dtype=pl.String)
+            .alias("destination_coreason_id"),
+            pl.col("typeId").map_elements(generate_uuid, return_dtype=pl.String).alias("type_coreason_id"),
+        )
+
+        logger.info("Successfully constructed Silver Relationship LazyFrame.")
+        return transformed_lf
