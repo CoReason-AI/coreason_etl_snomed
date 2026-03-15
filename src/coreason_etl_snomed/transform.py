@@ -202,3 +202,45 @@ class EpistemicSilverRelationshipIntent(BaseModel):
 
         logger.info("Successfully constructed Silver Relationship LazyFrame.")
         return transformed_lf
+
+
+class EpistemicGoldConceptIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for joining the Silver Concept and Silver Description
+    data layers to create a denormalized, graph-ready representation of the concept.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self, silver_concept: pl.LazyFrame, silver_description: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Executes the gold concept transformation. It joins the Silver Concept with the Silver Description,
+        filters for the Fully Specified Name, and assigns the primary string name.
+
+        Args:
+            silver_concept (pl.LazyFrame): The transformed Silver Concept data.
+            silver_description (pl.LazyFrame): The transformed Silver Description data.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed gold concepts.
+        """
+        logger.info("Constructing Gold Concept LazyFrame.")
+
+        # Filter descriptions for Fully Specified Name (typeId == 900000000000003001) and active
+        # active == 1 is already handled by Silver, but doing it again as defensive filtering
+        # The primary string name should be just 'term'
+        filtered_desc = silver_description.filter(
+            (pl.col("typeId") == "900000000000003001") & (pl.col("active") == 1)
+        ).select(["concept_coreason_id", "term"])
+
+        # Join concept with filtered descriptions
+        # Using left join to retain concepts even if they lack a Fully Specified Name for some reason
+        transformed_lf = silver_concept.join(
+            filtered_desc, left_on="coreason_id", right_on="concept_coreason_id", how="left"
+        ).rename({"term": "name"})
+
+        logger.info("Successfully constructed Gold Concept LazyFrame.")
+        return transformed_lf
