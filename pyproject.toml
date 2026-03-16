@@ -50,6 +50,9 @@ dev = [
     "types-requests>=2.32.4.20260107",
 ]
 
+[project.scripts]
+coreason-etl-snomed = "coreason_etl_snomed.main:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/coreason_etl_snomed"]
 

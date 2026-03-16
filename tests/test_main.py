@@ -96,3 +96,21 @@ def test_epistemic_ontology_pipeline_intent_failure(mock_policy: EpistemicOntolo
             intent.execute()
 
         mock_extract.assert_not_called()
+
+
+def test_main_execution() -> None:
+    """Test the main entry point execution."""
+    with (
+        patch("coreason_etl_snomed.main.EpistemicOntologyPolicy") as mock_policy_cls,
+        patch("coreason_etl_snomed.main.EpistemicOntologyPipelineIntent") as mock_intent_cls,
+    ):
+        from coreason_etl_snomed.main import main
+
+        mock_policy_instance = mock_policy_cls.return_value
+        mock_intent_instance = mock_intent_cls.return_value
+
+        main()
+
+        mock_policy_cls.assert_called_once()
+        mock_intent_cls.assert_called_once_with(policy=mock_policy_instance)
+        mock_intent_instance.execute.assert_called_once()
