@@ -17,6 +17,8 @@ import pytest
 
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.transform import (
+    EpistemicGoldConceptIntent,
+    EpistemicGoldSynonymIntent,
     EpistemicSilverConceptIntent,
     EpistemicSilverDescriptionIntent,
     EpistemicSilverRelationshipIntent,
@@ -283,3 +285,117 @@ def test_epistemic_silver_relationship_missing_files(policy: EpistemicOntologyPo
     # Act / Assert
     with pytest.raises(FileNotFoundError, match="No Relationship Snapshot files found"):
         intent.execute()
+
+
+def test_epistemic_gold_concept_joins_name(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    concept_lf = pl.LazyFrame(
+        {
+            "coreason_id": ["concept-1", "concept-2"],
+            "id": ["1", "2"],
+        }
+    )
+
+    desc_lf = pl.LazyFrame(
+        {
+            "concept_coreason_id": ["concept-1", "concept-1", "concept-2"],
+            "typeId": ["900000000000003001", "900000000000013009", "900000000000003001"],
+            "active": [1, 1, 0],  # active Fully Specified, active Synonym, inactive Fully Specified
+            "term": ["Name 1", "Synonym 1", "Name 2"],
+        }
+    )
+
+    intent = EpistemicGoldConceptIntent(policy=policy)
+
+    # Act
+    df = intent.execute(concept_lf, desc_lf).collect()
+
+    # Assert
+    assert len(df) == 2
+
+    row1 = df.filter(pl.col("coreason_id") == "concept-1").row(0, named=True)
+    assert row1["name"] == "Name 1"
+
+    row2 = df.filter(pl.col("coreason_id") == "concept-2").row(0, named=True)
+    assert row2["name"] is None  # Since the FSN is inactive, left join leaves name as null
+
+
+def test_epistemic_gold_concept_missing_description(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    concept_lf = pl.LazyFrame(
+        {
+            "coreason_id": ["concept-1"],
+            "id": ["1"],
+        }
+    )
+
+    desc_lf = pl.LazyFrame(
+        {"concept_coreason_id": [], "typeId": [], "active": [], "term": []},
+        schema={"concept_coreason_id": pl.String, "typeId": pl.String, "active": pl.Int64, "term": pl.String},
+    )
+
+    intent = EpistemicGoldConceptIntent(policy=policy)
+
+    # Act
+    df = intent.execute(concept_lf, desc_lf).collect()
+
+    # Assert
+    assert len(df) == 1
+
+    row1 = df.filter(pl.col("coreason_id") == "concept-1").row(0, named=True)
+    assert row1["name"] is None
+
+
+def test_epistemic_gold_synonym_filters_and_aggregates(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    desc_lf = pl.LazyFrame(
+        {
+            "concept_coreason_id": ["concept-1", "concept-1", "concept-2", "concept-3", "concept-3"],
+            "typeId": [
+                "900000000000013009",  # Valid synonym
+                "900000000000013009",  # Valid synonym
+                "900000000000003001",  # Invalid type (Fully Specified Name)
+                "900000000000013009",  # Inactive synonym
+                "900000000000013009",  # Valid synonym
+            ],
+            "active": [1, 1, 1, 0, 1],
+            "term": ["Synonym A", "Synonym B", "Not a synonym", "Inactive synonym", "Synonym C"],
+        }
+    )
+
+    intent = EpistemicGoldSynonymIntent(policy=policy)
+
+    # Act
+    df = intent.execute(desc_lf).collect()
+
+    # Assert
+    assert len(df) == 2  # concept-1 and concept-3 should have synonyms
+
+    # concept-1
+    row1 = df.filter(pl.col("coreason_id") == "concept-1").row(0, named=True)
+    assert sorted(row1["synonyms"]) == ["Synonym A", "Synonym B"]
+
+    # concept-3
+    row3 = df.filter(pl.col("coreason_id") == "concept-3").row(0, named=True)
+    assert row3["synonyms"] == ["Synonym C"]
+
+    # concept-2 should not exist because it had no valid synonyms
+    assert len(df.filter(pl.col("coreason_id") == "concept-2")) == 0
+
+
+def test_epistemic_gold_synonym_empty_description(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    desc_lf = pl.LazyFrame(
+        {"concept_coreason_id": [], "typeId": [], "active": [], "term": []},
+        schema={"concept_coreason_id": pl.String, "typeId": pl.String, "active": pl.Int64, "term": pl.String},
+    )
+
+    intent = EpistemicGoldSynonymIntent(policy=policy)
+
+    # Act
+    df = intent.execute(desc_lf).collect()
+
+    # Assert
+    assert len(df) == 0
+    assert "coreason_id" in df.columns
+    assert "synonyms" in df.columns
