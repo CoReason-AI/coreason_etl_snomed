@@ -1,57 +1,18 @@
-# Problem Analysis
-The task is to implement the "Silver (The Refinery)" and "Gold (The Product)" layers of the Medallion Architecture for the SNOMED CT data pipeline.
-The FRD defines the following atomic units for implementation:
+### 1. Comprehensive Analysis
+The existing codebase has implemented the individual components for the Medallion ETL pipeline for SNOMED CT:
+- **Configuration:** `EpistemicOntologyPolicy` (`config.py`)
+- **Fetch:** `EpistemicOntologyFetchIntent` (`fetch.py`)
+- **Extract:** `EpistemicBronzeExtractionIntent` (`extract.py`)
+- **Transform (Silver & Gold):** `EpistemicSilverConceptIntent`, `EpistemicSilverDescriptionIntent`, `EpistemicSilverRelationshipIntent`, `EpistemicGoldConceptIntent`, `EpistemicGoldSynonymIntent`, `EpistemicGoldRelationshipIntent` (`transform.py`)
+- **Load:** `EpistemicGoldDatabaseLoadIntent` (`load.py`)
 
-1. **Silver Layer: Concept Transformation**
-   - Read raw `sct2_Concept_Snapshot_*.txt` using `polars`.
-   - Filter `active == 1`.
-   - Cast `id` to `pl.Utf8`.
-   - Parse `effectiveTime` to `pl.Date` (format: `%Y%m%d`).
-   - Add `coreason_id` using `UUID5(NAMESPACE_SNOMED, id)`.
+All of the `Intent` classes expose an `.execute(...)` method as verified.
 
-2. **Silver Layer: Description Transformation**
-   - Read raw `sct2_Description_Snapshot_*.txt` using `polars`.
-   - Filter `active == 1`.
-   - Cast `id` and `conceptId` to `pl.Utf8`.
-   - Parse `effectiveTime` to `pl.Date` (format: `%Y%m%d`).
-   - Add `coreason_id` using `UUID5(NAMESPACE_SNOMED, id)`.
-   - Add `concept_coreason_id` using `UUID5(NAMESPACE_SNOMED, conceptId)`.
+The primary delta between the current codebase and a fully functional package is an orchestration component that sequentially executes these intents to fulfill the pipeline's end-to-end functionality as defined in the Business and Functional Requirements Documents.
 
-3. **Silver Layer: Relationship Transformation**
-   - Read raw `sct2_Relationship_Snapshot_*.txt` using `polars`.
-   - Filter `active == 1`.
-   - Cast `id`, `sourceId`, `destinationId`, `typeId` to `pl.Utf8`.
-   - Parse `effectiveTime` to `pl.Date` (format: `%Y%m%d`).
-   - Add `coreason_id` using `UUID5(NAMESPACE_SNOMED, id)`.
-   - Add `source_coreason_id` using `UUID5(NAMESPACE_SNOMED, sourceId)`.
-   - Add `destination_coreason_id` using `UUID5(NAMESPACE_SNOMED, destinationId)`.
-   - Add `relationship_type_coreason_id` using `UUID5(NAMESPACE_SNOMED, typeId)`.
+### 2. Decomposition and Planning (Pending Atomic Units)
+Here is the list of pending atomic units required to fulfill the specification:
+1. **Implement `EpistemicOntologyPipelineIntent`:** Create an orchestrator in `main.py` that utilizes all the previously implemented intents (Fetch -> Extract -> Transform -> Load) to execute the end-to-end ETL pipeline. Remove the placeholder `hello_world` function. Add robust unit tests for the pipeline orchestrator in `test_main.py` heavily mocking all inner intents.
 
-4. **Gold Layer: `dim_snomed_concept` Generation**
-   - Join Silver Concept with Silver Description on `conceptId`.
-   - Filter Description for `typeId == '900000000000003001'` (Fully Specified Name).
-   - Produce the final schema and save/yield.
-
-5. **Gold Layer: `bridge_snomed_synonym` Generation**
-   - Process Silver Description.
-   - Filter for `typeId == '900000000000013009'` (Synonym).
-   - Produce a mapping from `coreason_id` to an array of synonyms.
-
-6. **Gold Layer: `fact_snomed_relationship` Generation**
-   - Process Silver Relationship.
-   - Produce the final schema using chunking/sink_parquet to avoid OOM.
-
-The user explicitly requires selecting **ONE Atomic Unit** and implementing it.
-The "One Step" Rule says: Choose one and only one atomic unit from your list to implement in this iteration. Select the smallest possible increment that moves the project toward the goal.
-
-I will implement: **1. Silver Layer: Concept Transformation**
-
-# Atomic Units List:
-1. Silver Layer: Concept Transformation (To be implemented in this iteration)
-2. Silver Layer: Description Transformation
-3. Silver Layer: Relationship Transformation
-4. Gold Layer: `dim_snomed_concept` Generation
-5. Gold Layer: `bridge_snomed_synonym` Generation
-6. Gold Layer: `fact_snomed_relationship` Generation
-
-I'll write the class `EpistemicSilverConceptIntent` in `src/coreason_etl_snomed/transform.py` that handles Concept transformation.
+### 3. Selection
+I will select **Atomic Unit 1 (Implement `EpistemicOntologyPipelineIntent`)** to implement in this iteration.
