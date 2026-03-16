@@ -83,9 +83,10 @@ wheels = [
 name = "coreason-etl-snomed"
 source = { editable = "." }
 dependencies = [
-    { name = "dlt", extra = ["postgres"] },
+    { name = "dlt" },
     { name = "loguru" },
     { name = "polars" },
+    { name = "psycopg2-binary", marker = "sys_platform != 'win32'" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "requests" },
@@ -118,9 +119,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dlt", extras = ["postgres"], specifier = "<1.23.0" },
+    { name = "dlt", marker = "python_full_version >= '3.14'", specifier = "<1.23.0" },
+    { name = "dlt", extras = ["postgres"], marker = "python_full_version < '3.14'", specifier = "<1.23.0" },
     { name = "loguru", specifier = ">=0.7.2" },
     { name = "polars", specifier = ">=1.39.0" },
+    { name = "psycopg2-binary", marker = "sys_platform != 'win32'", specifier = ">=2.9.10" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "requests", specifier = ">=2.32.5" },
@@ -276,11 +279,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c1/03/78a79269f004241f6644d56c2666fd105fd311a120ff8c747d5d106a6c37/dlt-1.22.2.tar.gz", hash = "sha256:55be2318c0e5ca024200000a02bd51dfd3078f5bbf0b233b3ee64329f9987031", size = 940374, upload-time = "2026-03-01T18:34:40.048Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/a3/ca205dd3daaa8896f0550c2090983125494246c849c63b8aadb3f7f12708/dlt-1.22.2-py3-none-any.whl", hash = "sha256:ee0741fb80e16bcff444e9670d7008a1325d5db0c8650f4e1d53722181adc186", size = 1191198, upload-time = "2026-03-01T18:34:36.93Z" },
-]
-
-[package.optional-dependencies]
-postgres = [
-    { name = "psycopg2-binary" },
 ]
 
 [[package]]
@@ -842,7 +840,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/76/36/03801461b31b29fe58d228c24388f999fe814dfc302856e0d17f97d7c54d/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_ppc64le.whl", hash = "sha256:9bd81e64e8de111237737b29d68039b9c813bdf520156af36d26819c9a979e5f", size = 3298663, upload-time = "2025-10-10T11:13:44.878Z" },
     { url = "https://files.pythonhosted.org/packages/97/77/21b0ea2e1a73aa5fa9222b2a6b8ba325c43c3a8d54272839c991f2345656/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_riscv64.whl", hash = "sha256:32770a4d666fbdafab017086655bcddab791d7cb260a16679cc5a7338b64343b", size = 3044737, upload-time = "2025-10-30T02:55:35.69Z" },
     { url = "https://files.pythonhosted.org/packages/67/69/f36abe5f118c1dca6d3726ceae164b9356985805480731ac6712a63f24f0/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:c3cb3a676873d7506825221045bd70e0427c905b9c8ee8d6acd70cfcbd6e576d", size = 3347643, upload-time = "2025-10-10T11:13:53.499Z" },
-    { url = "https://files.pythonhosted.org/packages/e1/36/9c0c326fe3a4227953dfb29f5d0c8ae3b8eb8c1cd2967aa569f50cb3c61f/psycopg2_binary-2.9.11-cp314-cp314-win_amd64.whl", hash = "sha256:4012c9c954dfaccd28f94e84ab9f94e12df76b4afb22331b1f0d3154893a6316", size = 2803913, upload-time = "2025-10-10T11:13:57.058Z" },
 ]
 
 [[package]]

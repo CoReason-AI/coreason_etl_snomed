@@ -12,12 +12,14 @@ authors = [
     { name = "Akshaya M", email = "akshaya.movvar@coreason.ai" },
 ]
 dependencies = [
-    "dlt[postgres]<1.23.0",
+    "dlt[postgres]<1.23.0; python_version < '3.14'",
+    "dlt<1.23.0; python_version >= '3.14'",
     "loguru>=0.7.2",
     "polars>=1.39.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "requests>=2.32.5",
+    "psycopg2-binary>=2.9.10; sys_platform != 'win32'",
 ]
 license = { file = "LICENSE" }
 classifiers = [
