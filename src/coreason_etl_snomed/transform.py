@@ -283,3 +283,41 @@ class EpistemicGoldSynonymIntent(BaseModel):
 
         logger.info("Successfully constructed Gold Synonym LazyFrame.")
         return transformed_lf
+
+
+class EpistemicGoldRelationshipIntent(BaseModel):
+    """
+    AGENT INSTRUCTION: This class is responsible for shaping the Silver Relationship data into the
+    final Gold representation for the fact_snomed_relationship table.
+    """
+
+    policy: EpistemicOntologyPolicy = Field(
+        ...,
+        description="The epistemological and configuration boundaries for the SNOMED pipeline.",
+    )
+
+    def execute(self, silver_relationship: pl.LazyFrame) -> pl.LazyFrame:
+        """
+        Executes the gold relationship transformation. It takes the Silver Relationship data,
+        selects the required columns, and renames `type_coreason_id` to `relationship_type_coreason_id`.
+
+        Args:
+            silver_relationship (pl.LazyFrame): The transformed Silver Relationship data.
+
+        Returns:
+            pl.LazyFrame: A lazy evaluated polars DataFrame containing the transformed gold relationships.
+        """
+        logger.info("Constructing Gold Relationship LazyFrame.")
+
+        # Select only the needed columns for the fact table
+        transformed_lf = silver_relationship.select(
+            [
+                pl.col("coreason_id"),
+                pl.col("source_coreason_id"),
+                pl.col("destination_coreason_id"),
+                pl.col("type_coreason_id").alias("relationship_type_coreason_id"),
+            ]
+        )
+
+        logger.info("Successfully constructed Gold Relationship LazyFrame.")
+        return transformed_lf
