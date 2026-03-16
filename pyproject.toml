@@ -83,5 +83,8 @@ addopts = "-n auto --cov=src --cov-report=term-missing --cov-report=html --cov-f
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.deptry.per_rule_ignores]
+DEP002 = ["psycopg2-binary"]
+
 [tool.coverage.run]
 omit = ["tests/*"]
