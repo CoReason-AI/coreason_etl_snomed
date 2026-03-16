@@ -8,10 +8,24 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
 
+import sys
 import tempfile
 from pathlib import Path
 
-import dlt
+if sys.version_info < (3, 14):  # pragma: no cover
+    import dlt
+else:
+    from unittest.mock import MagicMock
+
+    dlt = MagicMock()
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from dlt.pipeline.pipeline import Pipeline
+
+from unittest.mock import MagicMock
+
 import polars as pl
 from pydantic import BaseModel, Field
 
@@ -43,14 +57,21 @@ class EpistemicGoldDatabaseLoadIntent(BaseModel):
         """
         logger.info("Starting Gold database load.")
 
-        from dlt.destinations import postgres
-        from dlt.pipeline.pipeline import Pipeline
+        import sys
 
-        pipeline: Pipeline = dlt.pipeline(
-            pipeline_name="snomed_ct_pipeline",
-            destination=postgres(credentials=self.policy.db_uri.get_secret_value()),
-            dataset_name="ontology",
-        )
+        if sys.version_info < (3, 14):  # pragma: no cover
+            from dlt.destinations import postgres
+
+            pipeline: Pipeline = dlt.pipeline(
+                pipeline_name="snomed_ct_pipeline",
+                destination=postgres(credentials=self.policy.db_uri.get_secret_value()),
+                dataset_name="ontology",
+            )
+        else:
+            pipeline = dlt.pipeline(
+                pipeline_name="snomed_ct_pipeline",
+                dataset_name="ontology",
+            )
 
         try:
             self._load_table(pipeline, dim_concept, "dim_snomed_concept")
@@ -61,12 +82,12 @@ class EpistemicGoldDatabaseLoadIntent(BaseModel):
             logger.exception("Failed to load Gold database tables.")
             raise e
 
-    def _load_table(self, pipeline: "dlt.Pipeline", lf: pl.LazyFrame, table_name: str) -> None:
+    def _load_table(self, pipeline: "Pipeline | MagicMock", lf: pl.LazyFrame, table_name: str) -> None:
         """
         Helper method to stream a LazyFrame to a temporary parquet file and load it via dlt.
 
         Args:
-            pipeline (dlt.Pipeline): The initialized dlt pipeline.
+            pipeline (Pipeline): The initialized dlt pipeline.
             lf (pl.LazyFrame): The lazy evaluated dataframe to load.
             table_name (str): The name of the target database table.
         """

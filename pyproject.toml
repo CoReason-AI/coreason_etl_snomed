@@ -12,7 +12,7 @@ authors = [
     { name = "Akshaya M", email = "akshaya.movvar@coreason.ai" },
 ]
 dependencies = [
-    "dlt<1.23.0",
+    "dlt<1.23.0; python_version < '3.14'",
     "loguru>=0.7.2",
     "polars>=1.39.0",
     "pydantic>=2.12.5",
@@ -67,7 +67,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "SIM", "RUF", "ARG", "C4", "PT", "TCH", "FA", "PIE", "RET", "PERF", "FURB", "LOG", "N", "A", "S"]
-ignore = ["S101", "TC001", "TC002", "TC003", "UP037"]
+ignore = ["S101", "TC001", "TC002", "TC003", "UP037", "UP036"]
 
 [tool.mypy]
 python_version = "3.14"

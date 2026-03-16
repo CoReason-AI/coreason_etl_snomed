@@ -8,11 +8,16 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
-from dlt.pipeline.pipeline import Pipeline
+
+if sys.version_info < (3, 14):
+    from dlt.pipeline.pipeline import Pipeline
+else:
+    Pipeline = MagicMock
 
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.load import EpistemicGoldDatabaseLoadIntent
@@ -55,14 +60,15 @@ def test_epistemic_gold_database_load_intent_success(
     intent = EpistemicGoldDatabaseLoadIntent(policy=mock_policy)
 
     with (
-        patch("coreason_etl_snomed.load.dlt.pipeline") as mock_pipeline_creator,
+        patch("coreason_etl_snomed.load.dlt.pipeline", return_value=MagicMock(spec=Pipeline)) as mock_pipeline_creator,
         patch.object(pl.LazyFrame, "sink_parquet") as mock_sink_parquet,
         patch("coreason_etl_snomed.load.tempfile.NamedTemporaryFile") as mock_tempfile,
         patch("coreason_etl_snomed.load.Path.unlink") as mock_unlink,
         patch("coreason_etl_snomed.load.Path.exists", return_value=True),
     ):
-        mock_pipeline = MagicMock(spec=Pipeline)
-        mock_pipeline_creator.return_value = mock_pipeline
+        mock_pipeline = mock_pipeline_creator.return_value
+        # For mocking Pipeline properties cleanly
+        mock_pipeline.run = MagicMock()
         mock_pipeline.run.return_value = "Mock Load Info"
 
         mock_temp_instance = MagicMock()
@@ -98,14 +104,14 @@ def test_epistemic_gold_database_load_intent_dlt_failure(
     intent = EpistemicGoldDatabaseLoadIntent(policy=mock_policy)
 
     with (
-        patch("coreason_etl_snomed.load.dlt.pipeline") as mock_pipeline_creator,
+        patch("coreason_etl_snomed.load.dlt.pipeline", return_value=MagicMock(spec=Pipeline)) as mock_pipeline_creator,
         patch.object(pl.LazyFrame, "sink_parquet"),
         patch("coreason_etl_snomed.load.tempfile.NamedTemporaryFile") as mock_tempfile,
         patch("coreason_etl_snomed.load.Path.unlink") as mock_unlink,
         patch("coreason_etl_snomed.load.Path.exists", return_value=True),
     ):
-        mock_pipeline = MagicMock(spec=Pipeline)
-        mock_pipeline_creator.return_value = mock_pipeline
+        mock_pipeline = mock_pipeline_creator.return_value
+        mock_pipeline.run = MagicMock()
         mock_pipeline.run.side_effect = Exception("DLT Load Failed")
 
         mock_temp_instance = MagicMock()
@@ -130,14 +136,14 @@ def test_epistemic_gold_database_load_intent_sink_parquet_failure(
     intent = EpistemicGoldDatabaseLoadIntent(policy=mock_policy)
 
     with (
-        patch("coreason_etl_snomed.load.dlt.pipeline") as mock_pipeline_creator,
+        patch("coreason_etl_snomed.load.dlt.pipeline", return_value=MagicMock(spec=Pipeline)) as mock_pipeline_creator,
         patch.object(pl.LazyFrame, "sink_parquet", side_effect=Exception("Sink Parquet Failed")),
         patch("coreason_etl_snomed.load.tempfile.NamedTemporaryFile") as mock_tempfile,
         patch("coreason_etl_snomed.load.Path.unlink") as mock_unlink,
         patch("coreason_etl_snomed.load.Path.exists", return_value=True),
     ):
-        mock_pipeline = MagicMock(spec=Pipeline)
-        mock_pipeline_creator.return_value = mock_pipeline
+        mock_pipeline = mock_pipeline_creator.return_value
+        mock_pipeline.run = MagicMock()
 
         mock_temp_instance = MagicMock()
         mock_temp_instance.name = "mock_temp.parquet"
