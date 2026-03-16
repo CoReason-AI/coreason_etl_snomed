@@ -18,6 +18,7 @@ import pytest
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.transform import (
     EpistemicGoldConceptIntent,
+    EpistemicGoldRelationshipIntent,
     EpistemicGoldSynonymIntent,
     EpistemicSilverConceptIntent,
     EpistemicSilverDescriptionIntent,
@@ -399,3 +400,76 @@ def test_epistemic_gold_synonym_empty_description(policy: EpistemicOntologyPolic
     assert len(df) == 0
     assert "coreason_id" in df.columns
     assert "synonyms" in df.columns
+
+
+def test_epistemic_gold_relationship_shapes_schema(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    silver_rel_lf = pl.LazyFrame(
+        {
+            "coreason_id": ["rel-1", "rel-2"],
+            "effectiveTime": [date(2002, 1, 31), date(2002, 1, 31)],
+            "active": [1, 1],
+            "moduleId": ["mod-1", "mod-2"],
+            "sourceId": ["src-1", "src-2"],
+            "destinationId": ["dest-1", "dest-2"],
+            "relationshipGroup": ["0", "1"],
+            "typeId": ["type-1", "type-2"],
+            "characteristicTypeId": ["char-1", "char-2"],
+            "modifierId": ["mod-1", "mod-2"],
+            "source_coreason_id": ["src-core-1", "src-core-2"],
+            "destination_coreason_id": ["dest-core-1", "dest-core-2"],
+            "type_coreason_id": ["type-core-1", "type-core-2"],
+        }
+    )
+
+    intent = EpistemicGoldRelationshipIntent(policy=policy)
+
+    # Act
+    df = intent.execute(silver_rel_lf).collect()
+
+    # Assert
+    assert len(df) == 2
+    assert df.columns == [
+        "coreason_id",
+        "source_coreason_id",
+        "destination_coreason_id",
+        "relationship_type_coreason_id",
+    ]
+
+    row1 = df.row(0, named=True)
+    assert row1["coreason_id"] == "rel-1"
+    assert row1["source_coreason_id"] == "src-core-1"
+    assert row1["destination_coreason_id"] == "dest-core-1"
+    assert row1["relationship_type_coreason_id"] == "type-core-1"
+
+
+def test_epistemic_gold_relationship_empty_data(policy: EpistemicOntologyPolicy) -> None:
+    # Arrange
+    silver_rel_lf = pl.LazyFrame(
+        {
+            "coreason_id": [],
+            "source_coreason_id": [],
+            "destination_coreason_id": [],
+            "type_coreason_id": [],
+        },
+        schema={
+            "coreason_id": pl.String,
+            "source_coreason_id": pl.String,
+            "destination_coreason_id": pl.String,
+            "type_coreason_id": pl.String,
+        },
+    )
+
+    intent = EpistemicGoldRelationshipIntent(policy=policy)
+
+    # Act
+    df = intent.execute(silver_rel_lf).collect()
+
+    # Assert
+    assert len(df) == 0
+    assert df.columns == [
+        "coreason_id",
+        "source_coreason_id",
+        "destination_coreason_id",
+        "relationship_type_coreason_id",
+    ]
