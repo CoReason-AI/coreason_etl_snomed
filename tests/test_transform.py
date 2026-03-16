@@ -54,9 +54,9 @@ def test_epistemic_silver_concept_reads_and_casts_id(policy: EpistemicOntologyPo
     # Assert
     assert len(df) == 1
 
-    # Verify `id` is properly cast as a string type (Utf8/String in polars)
-    assert df["id"].dtype == pl.String
-    assert df["id"][0] == "138875005"
+    # Verify `id` is properly cast as a string type (Utf8/String in polars) and aliased as `source_id`
+    assert df["source_id"].dtype == pl.String
+    assert df["source_id"][0] == "138875005"
 
 
 def test_epistemic_silver_concept_filters_inactive(policy: EpistemicOntologyPolicy) -> None:
@@ -74,7 +74,7 @@ def test_epistemic_silver_concept_filters_inactive(policy: EpistemicOntologyPoli
 
     # Assert
     assert len(df) == 1
-    assert "138875006" not in df["id"].to_list()
+    assert "138875006" not in df["source_id"].to_list()
 
 
 def test_epistemic_silver_concept_uuid_and_date(policy: EpistemicOntologyPolicy) -> None:
@@ -125,8 +125,8 @@ def test_epistemic_silver_description_reads_and_casts_id(policy: EpistemicOntolo
     assert len(df) == 1
 
     # Verify `id` and `conceptId` are properly cast as string type
-    assert df["id"].dtype == pl.String
-    assert df["id"][0] == "11111"
+    assert df["source_id"].dtype == pl.String
+    assert df["source_id"][0] == "11111"
     assert df["conceptId"].dtype == pl.String
     assert df["conceptId"][0] == "138875005"
 
@@ -152,7 +152,7 @@ def test_epistemic_silver_description_filters_inactive(policy: EpistemicOntology
 
     # Assert
     assert len(df) == 1
-    assert "22222" not in df["id"].to_list()
+    assert "22222" not in df["source_id"].to_list()
 
 
 def test_epistemic_silver_description_uuid_and_date(policy: EpistemicOntologyPolicy) -> None:
@@ -211,8 +211,8 @@ def test_epistemic_silver_relationship_reads_and_casts_id(policy: EpistemicOntol
     assert len(df) == 1
 
     # Verify ID fields are properly cast as string type
-    assert df["id"].dtype == pl.String
-    assert df["id"][0] == "11111"
+    assert df["source_id"].dtype == pl.String
+    assert df["source_id"][0] == "11111"
     assert df["sourceId"].dtype == pl.String
     assert df["sourceId"][0] == "138875005"
     assert df["destinationId"].dtype == pl.String
@@ -244,7 +244,7 @@ def test_epistemic_silver_relationship_filters_inactive(policy: EpistemicOntolog
 
     # Assert
     assert len(df) == 1
-    assert "22222" not in df["id"].to_list()
+    assert "22222" not in df["source_id"].to_list()
 
 
 def test_epistemic_silver_relationship_uuid_and_date(policy: EpistemicOntologyPolicy) -> None:

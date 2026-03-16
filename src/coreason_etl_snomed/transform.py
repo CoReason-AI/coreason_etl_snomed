@@ -64,9 +64,14 @@ class EpistemicSilverConceptIntent(BaseModel):
         def generate_uuid(snomed_id: str) -> str:
             return str(uuid.uuid5(namespace_uuid, snomed_id))
 
-        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
-            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
-            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+        transformed_lf = (
+            lf.filter(pl.col("active") == 1)
+            .with_columns(
+                pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+                pl.col("id").alias("source_id"),
+                pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+            )
+            .drop("id")
         )
 
         logger.info("Successfully constructed Silver Concept LazyFrame.")
@@ -126,10 +131,15 @@ class EpistemicSilverDescriptionIntent(BaseModel):
         def generate_uuid(snomed_id: str) -> str:
             return str(uuid.uuid5(namespace_uuid, snomed_id))
 
-        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
-            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
-            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
-            pl.col("conceptId").map_elements(generate_uuid, return_dtype=pl.String).alias("concept_coreason_id"),
+        transformed_lf = (
+            lf.filter(pl.col("active") == 1)
+            .with_columns(
+                pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+                pl.col("id").alias("source_id"),
+                pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+                pl.col("conceptId").map_elements(generate_uuid, return_dtype=pl.String).alias("concept_coreason_id"),
+            )
+            .drop("id")
         )
 
         logger.info("Successfully constructed Silver Description LazyFrame.")
@@ -190,14 +200,19 @@ class EpistemicSilverRelationshipIntent(BaseModel):
         def generate_uuid(snomed_id: str) -> str:
             return str(uuid.uuid5(namespace_uuid, snomed_id))
 
-        transformed_lf = lf.filter(pl.col("active") == 1).with_columns(
-            pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
-            pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
-            pl.col("sourceId").map_elements(generate_uuid, return_dtype=pl.String).alias("source_coreason_id"),
-            pl.col("destinationId")
-            .map_elements(generate_uuid, return_dtype=pl.String)
-            .alias("destination_coreason_id"),
-            pl.col("typeId").map_elements(generate_uuid, return_dtype=pl.String).alias("type_coreason_id"),
+        transformed_lf = (
+            lf.filter(pl.col("active") == 1)
+            .with_columns(
+                pl.col("effectiveTime").cast(pl.String).str.to_date("%Y%m%d").alias("effectiveTime"),
+                pl.col("id").alias("source_id"),
+                pl.col("id").map_elements(generate_uuid, return_dtype=pl.String).alias("coreason_id"),
+                pl.col("sourceId").map_elements(generate_uuid, return_dtype=pl.String).alias("source_coreason_id"),
+                pl.col("destinationId")
+                .map_elements(generate_uuid, return_dtype=pl.String)
+                .alias("destination_coreason_id"),
+                pl.col("typeId").map_elements(generate_uuid, return_dtype=pl.String).alias("type_coreason_id"),
+            )
+            .drop("id")
         )
 
         logger.info("Successfully constructed Silver Relationship LazyFrame.")
