@@ -12,6 +12,7 @@ authors = [
     { name = "Akshaya M", email = "akshaya.movvar@coreason.ai" },
 ]
 dependencies = [
+    "dlt<1.23.0; python_version < '3.14'",
     "loguru>=0.7.2",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
@@ -39,8 +40,16 @@ dev = [
     "mkdocstrings-python",
     "types-pyyaml>=6.0.12.20250915",
     "tzdata>=2025.3",
-    "pytest-xdist>=3.6.1"
+    "pytest-xdist>=3.6.1",
+    "pytest-mock>=3.15.1",
+    "responses>=0.26.0",
+    "types-pygments>=2.19.0.20251121",
+    "types-pexpect>=4.9.0.20260127",
+    "types-requests>=2.32.4.20260107",
 ]
+
+[project.scripts]
+coreason-etl-snomed = "coreason_etl_snomed.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/coreason_etl_snomed"]
@@ -59,7 +68,7 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "SIM", "RUF", "ARG", "C4", "PT", "TCH", "FA", "PIE", "RET", "PERF", "FURB", "LOG", "N", "A", "S"]
-ignore = ["S101", "TC001", "TC002", "TC003", "UP037"]
+ignore = ["S101", "TC001", "TC002", "TC003", "UP037", "UP036"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -72,6 +81,11 @@ plugins = ["pydantic.mypy"]
 addopts = "-n auto --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=100"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.deptry.per_rule_ignores]
+
+[tool.deptry]
+ignore = ["DEP001"]
 
 [tool.coverage.run]
 omit = ["tests/*"]
