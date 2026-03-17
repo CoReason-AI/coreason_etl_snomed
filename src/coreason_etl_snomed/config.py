@@ -8,40 +8,50 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
 
-"""
-AGENT INSTRUCTION: This module defines the strict epistemological and configuration boundaries for the SNOMED pipeline.
+"""Configuration state for SNOMED CT ETL pipeline.
+
+This module provides the central configuration schema for the coreason_etl_snomed
+pipeline, leveraging Pydantic Settings to automatically parse configuration from
+environment variables and .env files.
 """
 
-from pydantic import Field, SecretStr
+from typing import Literal
+
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class EpistemicOntologyPolicy(BaseSettings):
-    """
-    AGENT INSTRUCTION: Establishes configuration boundaries for the ontology pipeline.
-    """
+class SnomedConfigurationState(BaseSettings):  # type: ignore[misc]
+    """Immutable configuration state for the SNOMED pipeline.
 
-    umls_api_key: SecretStr = Field(
-        ...,
-        description="The UMLS API key required to access the NLM UTS API for SNOMED CT downloads.",
-        min_length=1,
-    )
-    db_uri: SecretStr = Field(
-        ...,
-        description="The target PostgreSQL database URI connection string.",
-        min_length=1,
-    )
-    bronze_data_path: str = Field(
-        "data/bronze/snomed/raw/",
-        description="The local file system path where raw RF2 text files are extracted.",
-    )
-    snomed_namespace_uuid: str = Field(
-        "b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f",
-        description="The static deterministic UUID string used as the NAMESPACE_SNOMED for UUID5 identity resolution.",
-    )
+    AGENT INSTRUCTION: Ensure that any modifications to this schema retain strict
+    typing and appropriate validation fields according to the project's semantic
+    architecture guidelines.
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+    )
+
+    umls_api_key: str = Field(
+        ...,
+        description="The National Library of Medicine (NLM) UMLS API Key for SNOMED downloads.",
+        min_length=1,
+    )
+
+    bronze_data_dir: str = Field(
+        "data/bronze/snomed/raw",
+        description="The target local directory for extracting raw Bronze RF2 textual snapshot files.",
+    )
+
+    db_uri: str = Field(
+        ...,
+        description="The PostgreSQL SQLAlchemy-compatible connection string for the CoReason Knowledge Graph.",
+    )
+
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        "INFO",
+        description="The operating log level for the pipeline.",
     )
