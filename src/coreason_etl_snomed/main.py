@@ -84,3 +84,18 @@ class EpistemicOntologyPipelineIntent(BaseModel):
         except Exception as e:
             logger.exception("Pipeline execution failed.")
             raise e
+
+
+def main() -> None:
+    """
+    AGENT INSTRUCTION: Entry point for the Epistemic Ontology Pipeline execution.
+    It instantiates the policy and executes the pipeline intent.
+    """
+    logger.info("Initializing Epistemic Ontology Policy.")
+    policy = EpistemicOntologyPolicy()
+    intent = EpistemicOntologyPipelineIntent(policy=policy)
+    intent.execute()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
