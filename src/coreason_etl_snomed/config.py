@@ -17,11 +17,11 @@ environment variables and .env files.
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class SnomedConfigurationState(BaseSettings):  # type: ignore[misc]
+class EpistemicOntologyPolicy(BaseSettings):
     """Immutable configuration state for the SNOMED pipeline.
 
     AGENT INSTRUCTION: Ensure that any modifications to this schema retain strict
@@ -35,20 +35,24 @@ class SnomedConfigurationState(BaseSettings):  # type: ignore[misc]
         extra="ignore",
     )
 
-    umls_api_key: str = Field(
+    umls_api_key: SecretStr = Field(
         ...,
         description="The National Library of Medicine (NLM) UMLS API Key for SNOMED downloads.",
         min_length=1,
     )
 
-    bronze_data_dir: str = Field(
+    bronze_data_path: str = Field(
         "data/bronze/snomed/raw",
         description="The target local directory for extracting raw Bronze RF2 textual snapshot files.",
     )
 
-    db_uri: str = Field(
+    db_uri: SecretStr = Field(
         ...,
         description="The PostgreSQL SQLAlchemy-compatible connection string for the CoReason Knowledge Graph.",
+    )
+
+    snomed_namespace_uuid: str = Field(
+        "b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f", description="The UUID5 namespace for identity generation."
     )
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
