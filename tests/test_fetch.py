@@ -29,7 +29,6 @@ def mock_policy() -> EpistemicOntologyPolicy:
         umls_api_key=SecretStr("test_key"),
         db_uri=SecretStr("postgresql://test:test@localhost:5432/testdb"),
         bronze_data_path="data/bronze/snomed/raw/",
-        snomed_namespace_uuid="b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f",
     )
 
 

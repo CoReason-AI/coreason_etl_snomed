@@ -17,6 +17,7 @@ import pytest
 
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.transform import (
+    NAMESPACE_SNOMED,
     EpistemicGoldConceptIntent,
     EpistemicGoldRelationshipIntent,
     EpistemicGoldSynonymIntent,
@@ -34,7 +35,6 @@ def policy(tmp_path: Path) -> EpistemicOntologyPolicy:
         umls_api_key="fake",
         db_uri="postgresql://user:pass@localhost:5432/db",
         bronze_data_path=str(bronze_dir),
-        snomed_namespace_uuid="b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f",
     )
 
 
@@ -90,7 +90,7 @@ def test_epistemic_silver_concept_uuid_and_date(policy: EpistemicOntologyPolicy)
     df = intent.execute().collect()
 
     # Assert
-    expected_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "138875005"))
+    expected_uuid = str(uuid.uuid5(NAMESPACE_SNOMED, "138875005"))
     assert df["coreason_id"][0] == expected_uuid
     assert df["effectiveTime"][0] == date(2002, 1, 31)
 
@@ -171,8 +171,8 @@ def test_epistemic_silver_description_uuid_and_date(policy: EpistemicOntologyPol
     df = intent.execute().collect()
 
     # Assert
-    expected_desc_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "11111"))
-    expected_concept_uuid = str(uuid.uuid5(uuid.UUID(policy.snomed_namespace_uuid), "138875005"))
+    expected_desc_uuid = str(uuid.uuid5(NAMESPACE_SNOMED, "11111"))
+    expected_concept_uuid = str(uuid.uuid5(NAMESPACE_SNOMED, "138875005"))
 
     assert df["coreason_id"][0] == expected_desc_uuid
     assert df["concept_coreason_id"][0] == expected_concept_uuid
@@ -265,7 +265,7 @@ def test_epistemic_silver_relationship_uuid_and_date(policy: EpistemicOntologyPo
     df = intent.execute().collect()
 
     # Assert
-    ns = uuid.UUID(policy.snomed_namespace_uuid)
+    ns = NAMESPACE_SNOMED
     expected_rel_uuid = str(uuid.uuid5(ns, "11111"))
     expected_source_uuid = str(uuid.uuid5(ns, "138875005"))
     expected_dest_uuid = str(uuid.uuid5(ns, "138875006"))

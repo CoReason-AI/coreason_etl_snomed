@@ -51,10 +51,6 @@ class EpistemicOntologyPolicy(BaseSettings):
         description="The PostgreSQL SQLAlchemy-compatible connection string for the CoReason Knowledge Graph.",
     )
 
-    snomed_namespace_uuid: str = Field(
-        "b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f", description="The UUID5 namespace for identity generation."
-    )
-
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         "INFO",
         description="The operating log level for the pipeline.",
