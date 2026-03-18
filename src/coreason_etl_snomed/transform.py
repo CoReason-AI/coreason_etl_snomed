@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.utils.logger import logger
 
+NAMESPACE_SNOMED = uuid.UUID("b3d2b3c0-4f5c-4f7f-8e41-0f4b3f1f3e0f")
+
 
 class EpistemicSilverConceptIntent(BaseModel):
     """
@@ -59,10 +61,8 @@ class EpistemicSilverConceptIntent(BaseModel):
             schema_overrides={"id": pl.String, "moduleId": pl.String, "definitionStatusId": pl.String},
         )
 
-        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
-
         def generate_uuid(snomed_id: str) -> str:
-            return str(uuid.uuid5(namespace_uuid, snomed_id))
+            return str(uuid.uuid5(NAMESPACE_SNOMED, snomed_id))
 
         transformed_lf = (
             lf.filter(pl.col("active") == 1)
@@ -126,10 +126,8 @@ class EpistemicSilverDescriptionIntent(BaseModel):
             },
         )
 
-        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
-
         def generate_uuid(snomed_id: str) -> str:
-            return str(uuid.uuid5(namespace_uuid, snomed_id))
+            return str(uuid.uuid5(NAMESPACE_SNOMED, snomed_id))
 
         transformed_lf = (
             lf.filter(pl.col("active") == 1)
@@ -195,10 +193,8 @@ class EpistemicSilverRelationshipIntent(BaseModel):
             },
         )
 
-        namespace_uuid = uuid.UUID(self.policy.snomed_namespace_uuid)
-
         def generate_uuid(snomed_id: str) -> str:
-            return str(uuid.uuid5(namespace_uuid, snomed_id))
+            return str(uuid.uuid5(NAMESPACE_SNOMED, snomed_id))
 
         transformed_lf = (
             lf.filter(pl.col("active") == 1)
