@@ -433,6 +433,9 @@ def test_epistemic_gold_relationship_shapes_schema(policy: EpistemicOntologyPoli
         "coreason_id",
         "source_coreason_id",
         "destination_coreason_id",
+        "relationshipGroup",
+        "characteristicTypeId",
+        "modifierId",
         "relationship_type_coreason_id",
     ]
 
@@ -440,6 +443,9 @@ def test_epistemic_gold_relationship_shapes_schema(policy: EpistemicOntologyPoli
     assert row1["coreason_id"] == "rel-1"
     assert row1["source_coreason_id"] == "src-core-1"
     assert row1["destination_coreason_id"] == "dest-core-1"
+    assert row1["relationshipGroup"] == "0"
+    assert row1["characteristicTypeId"] == "char-1"
+    assert row1["modifierId"] == "mod-1"
     assert row1["relationship_type_coreason_id"] == "type-core-1"
 
 
@@ -450,12 +456,18 @@ def test_epistemic_gold_relationship_empty_data(policy: EpistemicOntologyPolicy)
             "coreason_id": [],
             "source_coreason_id": [],
             "destination_coreason_id": [],
+            "relationshipGroup": [],
+            "characteristicTypeId": [],
+            "modifierId": [],
             "type_coreason_id": [],
         },
         schema={
             "coreason_id": pl.String,
             "source_coreason_id": pl.String,
             "destination_coreason_id": pl.String,
+            "relationshipGroup": pl.String,
+            "characteristicTypeId": pl.String,
+            "modifierId": pl.String,
             "type_coreason_id": pl.String,
         },
     )
@@ -471,5 +483,8 @@ def test_epistemic_gold_relationship_empty_data(policy: EpistemicOntologyPolicy)
         "coreason_id",
         "source_coreason_id",
         "destination_coreason_id",
+        "relationshipGroup",
+        "characteristicTypeId",
+        "modifierId",
         "relationship_type_coreason_id",
     ]
