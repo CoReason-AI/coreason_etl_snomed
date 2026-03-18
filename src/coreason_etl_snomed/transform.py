@@ -326,6 +326,9 @@ class EpistemicGoldRelationshipIntent(BaseModel):
                 pl.col("coreason_id"),
                 pl.col("source_coreason_id"),
                 pl.col("destination_coreason_id"),
+                pl.col("relationshipGroup"),
+                pl.col("characteristicTypeId"),
+                pl.col("modifierId"),
                 pl.col("type_coreason_id").alias("relationship_type_coreason_id"),
             ]
         )
