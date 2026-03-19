@@ -81,13 +81,19 @@ def test_epistemic_gold_database_load_intent_success(
         mock_pipeline_creator.assert_called_once()
         kwargs = mock_pipeline_creator.call_args[1]
         assert kwargs["pipeline_name"] == "snomed_ct_pipeline"
-        assert kwargs["dataset_name"] == "ontology"
+        assert kwargs["dataset_name"] == "gold"
 
         # Verify sink_parquet was called for each table
         assert mock_sink_parquet.call_count == 3
 
         # Verify dlt pipeline.run was called for each table with replace disposition
         assert mock_pipeline.run.call_count == 3
+
+        # Verify table names were correctly passed to pipeline.run
+        calls = mock_pipeline.run.call_args_list
+        assert calls[0].kwargs["table_name"] == "snomed_gold_dim_concept"
+        assert calls[1].kwargs["table_name"] == "snomed_gold_bridge_synonym"
+        assert calls[2].kwargs["table_name"] == "snomed_gold_fact_relationship"
 
         # Verify temporary file was deleted for each table
         assert mock_unlink.call_count == 3
