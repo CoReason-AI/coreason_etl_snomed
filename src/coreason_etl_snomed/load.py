@@ -58,18 +58,18 @@ class EpistemicGoldDatabaseLoadIntent(BaseModel):
             pipeline = dlt.pipeline(
                 pipeline_name="snomed_ct_pipeline",
                 destination=postgres(credentials=self.policy.db_uri.get_secret_value()),
-                dataset_name="gold",
+                dataset_name="ontology",
             )
         else:
             pipeline = dlt.pipeline(
                 pipeline_name="snomed_ct_pipeline",
-                dataset_name="gold",
+                dataset_name="ontology",
             )
 
         try:
-            self._load_table(pipeline, dim_concept, "snomed_gold_dim_concept")
-            self._load_table(pipeline, bridge_synonym, "snomed_gold_bridge_synonym")
-            self._load_table(pipeline, fact_relationship, "snomed_gold_fact_relationship")
+            self._load_table(pipeline, dim_concept, "dim_snomed_concept")
+            self._load_table(pipeline, bridge_synonym, "bridge_snomed_synonym")
+            self._load_table(pipeline, fact_relationship, "fact_snomed_relationship")
             logger.info("Successfully completed Gold database load.")
         except Exception as e:
             logger.exception("Failed to load Gold database tables.")
