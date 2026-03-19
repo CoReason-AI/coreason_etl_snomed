@@ -10,7 +10,7 @@
 
 import shutil
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from pydantic import BaseModel, Field
 
@@ -58,10 +58,12 @@ class EpistemicBronzeExtractionIntent(BaseModel):
                     if file_info.is_dir():
                         continue
 
-                    normalized_path = "/" + file_info.filename.replace("\\", "/")
-                    # Extract the actual filename from the normalized path
-                    filename = normalized_path.split("/")[-1]
-                    if "/rrf/" in normalized_path and filename in target_file_patterns:
+                    # Use PureWindowsPath to universally and safely parse Windows/POSIX ZIP paths
+                    member_path = PureWindowsPath(file_info.filename)
+                    filename = member_path.name
+
+                    # Ensure the file is inside an 'rrf' directory, and matches target patterns
+                    if "rrf" in member_path.parts and filename in target_file_patterns:
                         target_path = bronze_dir / filename
                         with zip_ref.open(file_info) as source, open(target_path, "wb") as target:
                             shutil.copyfileobj(source, target)
