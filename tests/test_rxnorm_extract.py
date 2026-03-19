@@ -115,3 +115,72 @@ def test_epistemic_bronze_extraction_intent_extraction_failure(
 
     # Ensure archive is STILL cleaned up even if extraction failed
     assert not archive_path.exists()
+
+
+def test_epistemic_bronze_extraction_intent_idempotency_and_duplicates(
+    mock_policy: EpistemicRxNormPolicy, tmp_path: Path
+) -> None:
+    """
+    Complex Scenario:
+    1. Tests that pre-existing files in the bronze directory are safely overwritten (idempotent).
+    2. Tests handling of duplicate target files inside the ZIP (e.g. multiple rrf/ folders).
+       The extraction should still succeed and the last processed file will overwrite previous ones.
+    """
+    bronze_dir = Path(mock_policy.bronze_data_path)
+    bronze_dir.mkdir(parents=True, exist_ok=True)
+
+    # Pre-populate bronze dir with old data
+    pre_existing_file = bronze_dir / "RXNCONSO.RRF"
+    pre_existing_file.write_text("old data")
+
+    archive_path = tmp_path / "complex_mock.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        # First occurrence of RXNCONSO in an rrf dir
+        zf.writestr("folder_a/rrf/RXNCONSO.RRF", b"new data A")
+        # Second occurrence of RXNCONSO in another rrf dir
+        zf.writestr("folder_b/rrf/RXNCONSO.RRF", b"new data B")
+        # Ensure we also test backslashes in ZIP paths (Windows style)
+        zf.writestr("folder_c\\rrf\\RXNREL.RRF", b"new rel data")
+
+        # Test backslash in folder but the member path still resolves
+        # Need to simulate what zipfile might actually provide with Windows paths
+        # Actually, python's zipfile often uses forward slashes regardless, but
+        # we added normalization for file_info.filename replacing backslash with forward slash.
+
+    intent = EpistemicBronzeExtractionIntent(policy=mock_policy, archive_path=archive_path)
+    intent.execute()
+
+    # Verify idempotency / overwrite behavior
+    assert pre_existing_file.exists()
+    assert pre_existing_file.read_text() == "new data B"  # The last one processed should win
+
+    # Verify Windows-style path was normalized and successfully extracted
+    rel_file = bronze_dir / "RXNREL.RRF"
+    assert rel_file.exists()
+    assert rel_file.read_text() == "new rel data"
+
+
+def test_epistemic_bronze_extraction_intent_write_permission_error(
+    mock_policy: EpistemicRxNormPolicy, tmp_path: Path, mocker: MagicMock
+) -> None:
+    """
+    Complex Scenario:
+    Simulates a file system error (like PermissionError or Disk Full) when trying to open the target file for writing.
+    Ensures that the exception is re-raised and the temp archive is properly cleaned up via the finally block.
+    """
+    archive_path = tmp_path / "permission_mock.zip"
+    with zipfile.ZipFile(archive_path, "w") as zf:
+        zf.writestr("rrf/RXNSAT.RRF", b"sat data")
+
+    # Mock Python's built-in open function to raise a PermissionError when writing
+    mock_open = mocker.mock_open()
+    mock_open.side_effect = PermissionError("Permission denied: cannot write to target path")
+    mocker.patch("builtins.open", mock_open)
+
+    intent = EpistemicBronzeExtractionIntent(policy=mock_policy, archive_path=archive_path)
+
+    with pytest.raises(PermissionError, match="Permission denied"):
+        intent.execute()
+
+    # The most critical part of this test: verify the finally block executed and cleaned the file
+    assert not archive_path.exists()

@@ -58,8 +58,9 @@ class EpistemicBronzeExtractionIntent(BaseModel):
                     if file_info.is_dir():
                         continue
 
-                    filename = Path(file_info.filename).name
                     normalized_path = "/" + file_info.filename.replace("\\", "/")
+                    # Extract the actual filename from the normalized path
+                    filename = normalized_path.split("/")[-1]
                     if "/rrf/" in normalized_path and filename in target_file_patterns:
                         target_path = bronze_dir / filename
                         with zip_ref.open(file_info) as source, open(target_path, "wb") as target:
