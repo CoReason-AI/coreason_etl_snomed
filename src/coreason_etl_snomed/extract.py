@@ -58,9 +58,21 @@ class EpistemicBronzeExtractionIntent(BaseModel):
                     if file_info.is_dir():
                         continue
 
-                    filename = Path(file_info.filename).name
-                    normalized_path = "/" + file_info.filename.replace("\\", "/")
-                    if "/Snapshot/Terminology/" in normalized_path:
+                    path_obj = Path(file_info.filename)
+                    filename = path_obj.name
+
+                    # zipfile usually returns POSIX paths, but we use Path().parts
+                    # to reliably check the folder hierarchy across platforms.
+                    parts = path_obj.parts
+
+                    # Check if 'Snapshot' and 'Terminology' appear sequentially in the path
+                    is_target_dir = False
+                    for i in range(len(parts) - 1):
+                        if parts[i] == "Snapshot" and parts[i + 1] == "Terminology":
+                            is_target_dir = True
+                            break
+
+                    if is_target_dir:
                         for pattern in target_file_patterns:
                             if filename.startswith(pattern) and filename.endswith(".txt"):
                                 target_path = bronze_dir / filename
