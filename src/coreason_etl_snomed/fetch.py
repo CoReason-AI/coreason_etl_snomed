@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_snomed
 
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -61,8 +62,9 @@ class EpistemicOntologyFetchIntent(BaseModel):
                 temp_file_path = Path(temp_file.name)
                 with requests.get(download_endpoint, stream=True, timeout=600) as r:
                     r.raise_for_status()
-                    for chunk in r.iter_content(chunk_size=8192):
-                        temp_file.write(chunk)
+                    # Ensure shutil.copyfileobj streams correctly by decoding raw response stream
+                    r.raw.decode_content = True
+                    shutil.copyfileobj(r.raw, temp_file)
             logger.info(f"Successfully downloaded archive to {temp_file_path}")
             return temp_file_path
         except Exception as e:
