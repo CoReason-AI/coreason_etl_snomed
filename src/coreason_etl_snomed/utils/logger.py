@@ -12,8 +12,24 @@ import sys
 from pathlib import Path
 
 from loguru import logger
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["logger"]
+
+
+# We define a minimal setting class here just to grab LOG_LEVEL
+# so we don't circular import EpistemicOntologyPolicy which depends on logger.
+class LoggerPolicy(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    log_level: str = "INFO"
+
+
+_log_level = LoggerPolicy().log_level
 
 # Remove default handler
 logger.remove()
@@ -21,7 +37,7 @@ logger.remove()
 # Sink 1: Stdout (Human-readable)
 logger.add(
     sys.stderr,
-    level="INFO",
+    level=_log_level,
     format=(
         "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
         "<level>{level: <8}</level> | "
@@ -42,5 +58,5 @@ logger.add(
     retention="10 days",
     serialize=True,
     enqueue=True,
-    level="INFO",
+    level=_log_level,
 )

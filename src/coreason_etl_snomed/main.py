@@ -13,7 +13,11 @@ from pydantic import BaseModel, Field
 from coreason_etl_snomed.config import EpistemicOntologyPolicy
 from coreason_etl_snomed.extract import EpistemicBronzeExtractionIntent
 from coreason_etl_snomed.fetch import EpistemicOntologyFetchIntent
-from coreason_etl_snomed.load import EpistemicGoldDatabaseLoadIntent
+from coreason_etl_snomed.load import (
+    EpistemicBronzeDatabaseLoadIntent,
+    EpistemicGoldDatabaseLoadIntent,
+    EpistemicSilverDatabaseLoadIntent,
+)
 from coreason_etl_snomed.transform import (
     EpistemicGoldConceptIntent,
     EpistemicGoldRelationshipIntent,
@@ -73,9 +77,21 @@ class EpistemicOntologyPipelineIntent(BaseModel):
             gold_relationship_intent = EpistemicGoldRelationshipIntent(policy=self.policy)
             gold_relationship_lf = gold_relationship_intent.execute(silver_relationship=silver_relationship_lf)
 
-            # 5. Load
-            load_intent = EpistemicGoldDatabaseLoadIntent(policy=self.policy)
-            load_intent.execute(
+            # 5. Load Bronze
+            bronze_load_intent = EpistemicBronzeDatabaseLoadIntent(policy=self.policy)
+            bronze_load_intent.execute()
+
+            # 6. Load Silver
+            silver_load_intent = EpistemicSilverDatabaseLoadIntent(policy=self.policy)
+            silver_load_intent.execute(
+                silver_concept=silver_concept_lf,
+                silver_description=silver_description_lf,
+                silver_relationship=silver_relationship_lf,
+            )
+
+            # 7. Load Gold
+            gold_load_intent = EpistemicGoldDatabaseLoadIntent(policy=self.policy)
+            gold_load_intent.execute(
                 dim_concept=gold_concept_lf, bridge_synonym=gold_synonym_lf, fact_relationship=gold_relationship_lf
             )
 

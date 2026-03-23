@@ -41,7 +41,9 @@ def test_epistemic_ontology_pipeline_intent_success(mock_policy: EpistemicOntolo
         patch("coreason_etl_snomed.main.EpistemicGoldConceptIntent.execute") as mock_gold_concept,
         patch("coreason_etl_snomed.main.EpistemicGoldSynonymIntent.execute") as mock_gold_synonym,
         patch("coreason_etl_snomed.main.EpistemicGoldRelationshipIntent.execute") as mock_gold_relationship,
-        patch("coreason_etl_snomed.main.EpistemicGoldDatabaseLoadIntent.execute") as mock_load,
+        patch("coreason_etl_snomed.main.EpistemicBronzeDatabaseLoadIntent.execute") as mock_bronze_load,
+        patch("coreason_etl_snomed.main.EpistemicSilverDatabaseLoadIntent.execute") as mock_silver_load,
+        patch("coreason_etl_snomed.main.EpistemicGoldDatabaseLoadIntent.execute") as mock_gold_load,
     ):
         mock_archive_path = MagicMock(spec=Path)
         mock_fetch.return_value = mock_archive_path
@@ -76,7 +78,13 @@ def test_epistemic_ontology_pipeline_intent_success(mock_policy: EpistemicOntolo
         mock_gold_synonym.assert_called_once_with(silver_description=mock_silver_description_lf)
         mock_gold_relationship.assert_called_once_with(silver_relationship=mock_silver_relationship_lf)
 
-        mock_load.assert_called_once_with(
+        mock_bronze_load.assert_called_once()
+        mock_silver_load.assert_called_once_with(
+            silver_concept=mock_silver_concept_lf,
+            silver_description=mock_silver_description_lf,
+            silver_relationship=mock_silver_relationship_lf,
+        )
+        mock_gold_load.assert_called_once_with(
             dim_concept=mock_gold_concept_lf,
             bridge_synonym=mock_gold_synonym_lf,
             fact_relationship=mock_gold_relationship_lf,
