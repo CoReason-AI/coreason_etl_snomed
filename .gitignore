@@ -140,3 +140,5 @@ cython_debug/
 
 # Runtime Logs
 logs/
+data/
+*.zip
